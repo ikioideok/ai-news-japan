@@ -1,5 +1,7 @@
-// This file simulates a database for the purpose of this task.
+import fs from "fs/promises";
+import path from "path";
 
+// Define types
 export type RawArticle = {
   id: number;
   title: string;
@@ -13,74 +15,97 @@ export type PublishedPost = {
   id: number;
   rawArticleId: number;
   title: string;
-  url: string;
+  url:string;
   sourceName: string;
   commentary: string;
   tag: "国内" | "海外" | "規制" | "資金調達" | "技術";
   createdAt: Date;
 };
 
-// --- In-memory "database" tables ---
+// Define file paths
+const DATA_DIR = path.join(process.cwd(), ".data");
+const RAW_ARTICLES_PATH = path.join(DATA_DIR, "raw_articles.json");
+const PUBLISHED_POSTS_PATH = path.join(DATA_DIR, "published_posts.json");
 
-let rawArticles: RawArticle[] = [];
-let publishedPosts: PublishedPost[] = [];
-let nextRawArticleId = 1;
-let nextPublishedPostId = 1;
+// Helper function to read data from a file
+async function readData<T>(filePath: string): Promise<T[]> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const data = await fs.readFile(filePath, "utf-8");
+    // Dates are stored as ISO strings, so we need to parse them back to Date objects
+    return JSON.parse(data, (key, value) => {
+      if (key === 'publishedAt' || key === 'createdAt') {
+        return new Date(value);
+      }
+      return value;
+    });
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return []; // File does not exist, return empty array
+    }
+    throw error;
+  }
+}
+
+// Helper function to write data to a file
+async function writeData<T>(filePath: string, data: T[]): Promise<void> {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+}
 
 // --- Database access functions ---
 
 export const getPublishedPosts = async (): Promise<PublishedPost[]> => {
-  // Sort by most recent first
-  return [...publishedPosts].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const posts = await readData<PublishedPost>(PUBLISHED_POSTS_PATH);
+  return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 };
 
 export const getPendingArticles = async (): Promise<RawArticle[]> => {
-  return rawArticles.filter(a => a.status === 'pending_review');
+  const articles = await readData<RawArticle>(RAW_ARTICLES_PATH);
+  return articles.filter(a => a.status === 'pending_review');
 };
 
 export const getArticleById = async (id: number): Promise<RawArticle | undefined> => {
-  return rawArticles.find(a => a.id === id);
+  const articles = await readData<RawArticle>(RAW_ARTICLES_PATH);
+  return articles.find(a => a.id === id);
 };
 
 export const addRawArticle = async (article: Omit<RawArticle, 'id' | 'status' | 'publishedAt'> & { publishedAt: string }) => {
-  const exists = rawArticles.some(a => a.url === article.url);
+  const articles = await readData<RawArticle>(RAW_ARTICLES_PATH);
+  const exists = articles.some(a => a.url === article.url);
+
   if (!exists) {
+    const nextId = articles.length > 0 ? Math.max(...articles.map(a => a.id)) + 1 : 1;
     const newArticle: RawArticle = {
       ...article,
-      id: nextRawArticleId++,
+      id: nextId,
       status: 'pending_review',
       publishedAt: new Date(article.publishedAt),
     };
-    rawArticles.push(newArticle);
+    articles.push(newArticle);
+    await writeData(RAW_ARTICLES_PATH, articles);
   }
 };
 
 export const updateArticleStatus = async (id: number, status: RawArticle['status']) => {
-  const article = await getArticleById(id);
-  if (article) {
-    article.status = status;
+  const articles = await readData<RawArticle>(RAW_ARTICLES_PATH);
+  const articleIndex = articles.findIndex(a => a.id === id);
+  if (articleIndex !== -1) {
+    articles[articleIndex].status = status;
+    await writeData(RAW_ARTICLES_PATH, articles);
   }
 };
 
 export const addPublishedPost = async (post: Omit<PublishedPost, 'id' | 'createdAt'>) => {
+  const posts = await readData<PublishedPost>(PUBLISHED_POSTS_PATH);
+  const nextId = posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1;
+
   const newPost: PublishedPost = {
     ...post,
-    id: nextPublishedPostId++,
+    id: nextId,
     createdAt: new Date(),
   };
-  publishedPosts.push(newPost);
+  posts.push(newPost);
+  await writeData(PUBLISHED_POSTS_PATH, posts);
   await updateArticleStatus(post.rawArticleId, 'published');
 };
-
-// For seeding initial data if needed, e.g. for local development
-/*
-export const __seedData = () => {
-  rawArticles = [
-    { id: 1, title: 'Test Article 1', url: 'https://example.com/1', sourceName: 'Test Source', publishedAt: new Date(), status: 'pending_review' },
-    { id: 2, title: 'Test Article 2', url: 'https://example.com/2', sourceName: 'Test Source', publishedAt: new Date(), status: 'pending_review' },
-  ];
-  publishedPosts = [];
-  nextRawArticleId = 3;
-  nextPublishedPostId = 1;
-}
-*/
