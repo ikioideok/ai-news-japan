@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { latestNews, features, tools } from "@/lib/data";
+import { features, tools } from "@/lib/data";
 import { NewsCard } from "@/components/NewsCard";
+import { getPublishedPosts } from "@/lib/db";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const latestNews = await getPublishedPosts();
+
   return (
     <div className="space-y-12">
       <section className="text-center">
@@ -23,7 +26,7 @@ export default function HomePage() {
           <Link href="/news" className="text-sm underline">もっと見る</Link>
         </div>
         <div className="grid md:grid-cols-3 gap-5 mt-4">
-          {latestNews.slice(0,6).map(n => <NewsCard key={n.id} item={n} />)}
+          {latestNews.slice(0, 6).map(n => <NewsCard key={n.id} item={n} />)}
         </div>
       </section>
 
