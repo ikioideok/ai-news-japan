@@ -1,19 +1,4 @@
-export type News = {
-  id: string;
-  title: string;
-  summary: string;
-  date: string;
-  tag: "国内" | "海外" | "規制" | "資金調達" | "技術";
-};
-
-export const latestNews: News[] = [
-  { id: "n1", title: "国内大手が生成AI新プラットフォームを発表", summary: "企業向けセキュア環境とガバナンスを備えた生成AI基盤。年内提供開始。", date: "2025-08-07", tag: "国内" },
-  { id: "n2", title: "米スタートアップがマルチモーダルLLMで大型調達", summary: "シリーズCで200億円規模を確保、製造業での導入拡大を狙う。", date: "2025-08-06", tag: "資金調達" },
-  { id: "n3", title: "EUのAI規制実装ガイドライン草案が公開", summary: "リスク分類と適合性評価の運用指針を提示。開発者への影響が焦点。", date: "2025-08-05", tag: "規制" },
-  { id: "n4", title: "研究速報：軽量化モデルでSOTAに匹敵する精度", summary: "蒸留と量子化の新手法で、推論コストを40%削減。", date: "2025-08-05", tag: "技術" },
-  { id: "n5", title: "国内自治体がAIカスタマーサポートを全庁導入", summary: "住民からの問い合わせ対応の平均応答時間を半減。", date: "2025-08-04", tag: "国内" },
-  { id: "n6", title: "バイオ×AIで創薬を加速、共同研究が拡大", summary: "大学と製薬の連携が相次ぐ。探索段階の成功率向上に期待。", date: "2025-08-03", tag: "海外" }
-];
+export const newsTags = ["国内", "海外", "規制", "資金調達", "技術"] as const;
 
 export const features = [
   {
