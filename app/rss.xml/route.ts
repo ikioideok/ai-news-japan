@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { latestNews } from "@/lib/data";
+import { getPublishedPosts } from "@/lib/db";
 
 export async function GET() {
-  const items = latestNews.slice(0, 20).map(n => `
+  const posts = await getPublishedPosts();
+  const items = posts.slice(0, 20).map(p => `
     <item>
-      <title><![CDATA[${n.title}]]></title>
-      <link>https://ai-news-japan.example.com/news#${n.id}</link>
-      <pubDate>${new Date(n.date).toUTCString()}</pubDate>
-      <description><![CDATA[${n.summary}]]></description>
+      <title><![CDATA[${p.title}]]></title>
+      <link>${p.url}</link>
+      <guid>${p.url}</guid>
+      <pubDate>${p.createdAt.toUTCString()}</pubDate>
+      <description><![CDATA[${p.commentary}]]></description>
     </item>
   `).join("\n");
 
